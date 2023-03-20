@@ -2,6 +2,7 @@
 Project Name: Staff Scehduling
 Creator: Francis Santos
 Student Number: C19373616
+Version: TAPv1.1 
 """
 
 """
@@ -11,6 +12,7 @@ correct parameters are set relating to appropriate data display
 """
 import pandas as pd
 import re
+import sys
 import numpy as np
 import openpyxl
 
@@ -49,17 +51,41 @@ def file_sort(file_loc):
     df["Staff Names"] = lst
     df = df.explode('Staff Names').reset_index(drop=True)
     df["Staff Names"] = df["Staff Names"].astype(str).replace(r"['()]","",regex=True)
-    df[['Last Name','First Name']] = df["Staff Names"].str.split(',',n=1,expand=True)       #n param stands for the number of splits done
+    #df[['Last Name','First Name']] = df["Staff Names"].str.split(',',n=1,expand=True)       #n param stands for the number of splits done
     df.index += 1   
-    df_order = df[["First Name","Last Name","Duration","Availability","Module Name"]]
+    df_order = df[["Staff Names","Duration","Availability","Module Name"]]
     return df_order
         
 
 def main():
     set_configs()
+    counter = 0
     while True:
         try:
-            file_loc = input(r"Please enter pathway of the excel file here i.e., (C:\Users\JohnDoe\Data.xlsx):")
+            file_loc = input(r"Please enter pathway of the excel file here i.e., (C:\Users\JohnDoe\Data.xlsx) or type default if pathway has already been set:")
+            xlfile = open("timetablelocation.txt","r")
+            readfile = xlfile.readlines()
+            xlfile.close()
+            if len(readfile) <= 0:
+                store_def_loc = input("Would you like to make this the default file location? Yes or No")
+                if "yes" in store_def_loc.lower():
+                    save_loc = open("timetablelocation.txt","w")
+                    save_loc.write(file_loc)
+                    save_loc.close()
+                xlfile.close()
+            elif "default" in file_loc.lower():
+                if len(readfile) > 1:
+                    for i in readfile:
+                        counter += 1
+                        print(counter," - ",i)
+                    whichloc = input("More than 1 default location detected, please specify which file location to use 1 or 2 etc. : ")
+                    file_loc = readfile
+                    sys.exit()
+                elif len(readfile) == 1 :
+                    file_loc = readfile
+                else:
+                    print("No default file location found or set")
+                xlfile.close()
             dataframe = file_sort(file_loc)
             if len(dataframe) > 0:
                 break
