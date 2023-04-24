@@ -2,7 +2,7 @@
 Project Name: Staff Scehduling
 Creator: Francis Santos
 Student Number: C19373616
-Version: TAPv2.1  
+Version: TAPv2.0  
 """
 
 """
@@ -93,7 +93,7 @@ def file_sort(file_loc):
     dataframe are sent back to main.
     """
     try:
-        read_data = pd.read_excel(file_loc,usecols="A,J,K,N,Q,U,V", names=["Module Name","Scheduled Start Time","Duration","Availability","Staff Names","Teaching Week Pattern","Number Of Teaching Weeks"])
+        read_data = pd.read_excel(file_loc,usecols="A,J,K,N,Q,V", names=["Module Name","Scheduled Start Time","Duration","Availability","Staff Names","Number Of Teaching Weeks"])
     except FileNotFoundError:
         print("Error occurred retrieving file path, application terminating!")
         sys.exit()
@@ -112,7 +112,7 @@ def file_sort(file_loc):
     df["Staff Names"] = df["Staff Names"].astype(str).replace(r"(?<!\w)'|'(?!\w)|[()]",'',regex=True)
     df["Staff Names"] = df["Staff Names"].astype(str).replace(r'[""]','',regex=True)
     df.index += 1
-    df_order = df[["Staff Names","Scheduled Start Time","Duration","Availability","Module Name","Teaching Week Pattern","Number Of Teaching Weeks"]]
+    df_order = df[["Staff Names","Scheduled Start Time","Duration","Availability","Module Name","Number Of Teaching Weeks"]]
     uniqlst = df["Staff Names"].unique()
     uniqlst.sort()
     return df_order,uniqlst
@@ -143,12 +143,10 @@ def process_sem1_data(dataframe, uniqlst):
             #if statement finds semester, weeks and terms all related to semester 1
             if (uniqlst[a] in dataframe["Staff Names"][i] and
                     (("Semester 1" in str(dataframe["Availability"][i]) or "Term 1" in str(dataframe["Availability"][i]))
-                     or (str(dataframe["Availability"][i]) == '0')
                      or (re.search(r"Weeks\s+([4-9]|1[0-6])\b", str(dataframe["Availability"][i])))
                      or (re.search(r"Week\s+([4-9]|1[0-6])\b", str(dataframe["Availability"][i]))))):
                 #section uses regex to find weeks from 4 - 9 and 10 - 16 
                 if ((re.search(r"Weeks\s+([4-9]|1[0-6])\b", str(dataframe["Availability"][i])))
-                    or (str(dataframe["Availability"][i]) == '0' and (re.search(r"([\b[4-9]\b|1[0-6]\b)", str(dataframe["Teaching Week Pattern"][i]))))
                      or (re.search(r"Week\s+([4-9]|1[0-6])\b", str(dataframe["Availability"][i])))):
                     nOf_teaching_wks = int(dataframe["Number Of Teaching Weeks"][i])
                     #index_Ahead = int(dataframe["Number Of Teaching Weeks"][i])
@@ -158,7 +156,6 @@ def process_sem1_data(dataframe, uniqlst):
                     wks_sched_start = pd.Timedelta(hours=wks_start_time.hour, minutes=wks_start_time.minute)
                     wks_sched_end = wks_counter1 + wks_sched_start
                     wks_totalhrs = wks_counter
-                    wks_nighthrs = pd.Timedelta(0)
                     #if int(dataframe["Number Of Teaching Weeks"][i])
                     if wks_sched_end > night_time:
                         if wks_sched_start >= night_time:
@@ -175,6 +172,7 @@ def process_sem1_data(dataframe, uniqlst):
                         if wks_nightcount != control:
                             wks_convrt_13_night = wks_nightcount * (nOf_teaching_wks/13)
                             wks_convrt_13 = wks_convrt_13 + wks_convrt_13_night
+                        #print(wks_counter1 , nOf_teaching_wks)
                         wks_realhrs += wks_convrt_13
                 else:
                     counter += pd.Timedelta(hours=dataframe["Duration"][i].hour,minutes=dataframe["Duration"][i].minute)
@@ -183,7 +181,6 @@ def process_sem1_data(dataframe, uniqlst):
                     sched_start = pd.Timedelta(hours=start_time.hour, minutes=start_time.minute)
                     sched_end = counter1 + sched_start
                     totalhrs = counter
-                    nighthrs = pd.Timedelta(0)
                     if sched_end > night_time:
                         if sched_start >= night_time:
                             sum1 = sched_end - sched_start
@@ -230,16 +227,16 @@ def process_sem2_data(dataframe, uniqlst):
                     (("Semester 2" in str(dataframe["Availability"][i]) or "Term 2" in str(dataframe["Availability"][i]))
                      or "Semester 1&2" in str(dataframe["Availability"][i]).lstrip()
                      or "Term 3" in str(dataframe["Availability"][i])
-                     or (str(dataframe["Availability"][i]) == '0')
-                     or (re.search(r"(1[8-9]|2[0-9]|3[0-9]4[0-5])", str(dataframe["Availability"][i])))
-                     or (re.search(r"Weeks\s+(1[8-9]|2[0-9]|3[0-9]|4[0-5])\b", str(dataframe["Availability"][i])))
-                     or (re.search(r"Week\s+(1[8-9]|2[0-9]|3[0-9]|4[0-5])\b", str(dataframe["Availability"][i]))))):
-                #section uses regex to find weeks from 18 - 19, 22 - 29 and 30 - 39
-                if ((re.search(r"Weeks\s+(1[8-9]|2[0-9]|3[0-9]|4[0-5])\b", str(dataframe["Availability"][i])))
-                    or (str(dataframe["Availability"][i]) == '0' and (re.search(r"(1[8-9]|2[0-9]|3[0-9])", str(dataframe["Teaching Week Pattern"][i]))))
+                     or (str(dataframe["Availability"][i]) == None or str(dataframe["Availability"][i]) == 0)
+                     or (re.search(r"(1[8-9]|2[0-9]|3[4-6])", str(dataframe["Availability"][i])))
+                     or (re.search(r"Weeks\s+(1[8-9]|2[0-9]|3[0-9])\b", str(dataframe["Availability"][i])))
+                     or (re.search(r"Week\s+(1[8-9]|2[0-9]|3[0-9])\b", str(dataframe["Availability"][i]))))):
+                #section uses regex to find weeks from 18 - 19, 22 - 29 and 34 - 36 
+                if ((re.search(r"Weeks\s+(1[8-9]|2[0-9]|3[0-9])\b", str(dataframe["Availability"][i])))
                     or "Term 2" in str(dataframe["Availability"][i])
                      or "Term 3" in str(dataframe["Availability"][i])
-                     or (re.search(r"Week\s+(1[8-9]|2[0-9]|3[0-9]|4[0-5])\b", str(dataframe["Availability"][i])))):
+                     or (re.search(r"Week\s+(1[8-9]|2[0-9]|3[0-9])\b", str(dataframe["Availability"][i])))
+                    or int(dataframe["Number Of Teaching Weeks"][i]) < 13):
                     nOf_teaching_wks = int(dataframe["Number Of Teaching Weeks"][i])
                     wks_counter += pd.Timedelta(hours=dataframe["Duration"][i].hour,minutes=dataframe["Duration"][i].minute)
                     wks_counter1 = pd.Timedelta(hours=dataframe["Duration"][i].hour,minutes=dataframe["Duration"][i].minute)
@@ -247,8 +244,8 @@ def process_sem2_data(dataframe, uniqlst):
                     wks_sched_start = pd.Timedelta(hours=wks_start_time.hour, minutes=wks_start_time.minute)
                     wks_sched_end = wks_counter1 + wks_sched_start
                     wks_totalhrs = wks_counter
-                    wks_convrt_13 = 0
-                    wks_nighthrs = pd.Timedelta(0)
+                    if "Bryant,  Jill"in dataframe["Staff Names"][i] and int(dataframe["Number Of Teaching Weeks"][i]) < 13:
+                        print("Found You")
                     if wks_sched_end > night_time:
                         if wks_sched_start >= night_time:
                             wks_sum1 = wks_sched_end - wks_sched_start
@@ -259,17 +256,18 @@ def process_sem2_data(dataframe, uniqlst):
                         wks_nightcount += wks_nighthrs
                     if wks_nightcount != control:
                         wks_totalhrs = wks_nightcount + wks_counter
-                        #print(wks_sched_end)                        
+                        
                     if nOf_teaching_wks != control and nOf_teaching_wks < 13:
+                        print(wks_counter1,nOf_teaching_wks,"/13")
                         wks_convrt_13 = wks_counter1 * (nOf_teaching_wks/13)
-                        #print(wks_counter1,"/13")
                         if wks_nightcount != control:
                             wks_convrt_13_night = wks_nighthrs * (nOf_teaching_wks/13)
                             #print("night count",wks_convrt_13_night)
                             wks_convrt_13 = wks_convrt_13 + wks_convrt_13_night
-                        #print(wks_convrt_13,nOf_teaching_wks)
                         wks_realhrs += wks_convrt_13
-                            
+                        print(wks_realhrs)
+                    #print(wks_totalhrs,nOf_teaching_wks)
+                    
                 else:
                     counter += pd.Timedelta(hours=dataframe["Duration"][i].hour,minutes=dataframe["Duration"][i].minute)
                     counter1 = pd.Timedelta(hours=dataframe["Duration"][i].hour,minutes=dataframe["Duration"][i].minute)
@@ -278,7 +276,6 @@ def process_sem2_data(dataframe, uniqlst):
                     sched_start = pd.Timedelta(hours=start_time.hour, minutes=start_time.minute)
                     sched_end = counter1 + sched_start
                     totalhrs = counter
-                    nighthrs = pd.Timedelta(0)
                     if sched_end > night_time:
                         if sched_start >= night_time:
                             sum1 = sched_end - sched_start
@@ -289,10 +286,11 @@ def process_sem2_data(dataframe, uniqlst):
                             nighthrs = sum2 * night_factor
                         nightcount += nighthrs
                         #print(nightcount)
+                #print(totalhrs,nOf_teaching_wks)
             if nightcount != control:
                 totalhrs = nightcount + counter
         if wks_totalhrs != control:
-            #print(totalhrs, wks_realhrs)
+            print(totalhrs,wks_realhrs)
             totalhrs = totalhrs + wks_realhrs
         print(totalhrs, uniqlst[a])
         sem2_lst.append(totalhrs)
