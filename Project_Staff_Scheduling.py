@@ -149,6 +149,7 @@ def process_sem1_data(dataframe, uniqlst):
                 #section uses regex to find weeks from 4 - 9 and 10 - 16 
                 if ((re.search(r"Weeks\s+([4-9]|1[0-6])\b", str(dataframe["Availability"][i])))
                     or (str(dataframe["Availability"][i]) == '0' and (re.search(r"([\b[4-9]\b|1[0-6]\b)", str(dataframe["Teaching Week Pattern"][i]))))
+                    or "Term 1" in str(dataframe["Availability"][i])
                      or (re.search(r"Week\s+([4-9]|1[0-6])\b", str(dataframe["Availability"][i])))):
                     nOf_teaching_wks = int(dataframe["Number Of Teaching Weeks"][i])
                     #index_Ahead = int(dataframe["Number Of Teaching Weeks"][i])
@@ -158,8 +159,8 @@ def process_sem1_data(dataframe, uniqlst):
                     wks_sched_start = pd.Timedelta(hours=wks_start_time.hour, minutes=wks_start_time.minute)
                     wks_sched_end = wks_counter1 + wks_sched_start
                     wks_totalhrs = wks_counter
+                    wks_convrt_13 = 0
                     wks_nighthrs = pd.Timedelta(0)
-                    #if int(dataframe["Number Of Teaching Weeks"][i])
                     if wks_sched_end > night_time:
                         if wks_sched_start >= night_time:
                             wks_sum1 = wks_sched_end - wks_sched_start
@@ -171,10 +172,12 @@ def process_sem1_data(dataframe, uniqlst):
                     if wks_nightcount != control:
                         wks_totalhrs = wks_nightcount + wks_counter
                     if nOf_teaching_wks != control:
+                        #print(wks_counter1,"/13",nOf_teaching_wks)
                         wks_convrt_13 = wks_counter1 * (nOf_teaching_wks/13)
                         if wks_nightcount != control:
-                            wks_convrt_13_night = wks_nightcount * (nOf_teaching_wks/13)
+                            wks_convrt_13_night = wks_nighthrs * (nOf_teaching_wks/13)
                             wks_convrt_13 = wks_convrt_13 + wks_convrt_13_night
+                        #print(wks_convrt_13,nOf_teaching_wks)
                         wks_realhrs += wks_convrt_13
                 else:
                     counter += pd.Timedelta(hours=dataframe["Duration"][i].hour,minutes=dataframe["Duration"][i].minute)
@@ -194,12 +197,19 @@ def process_sem1_data(dataframe, uniqlst):
                             nighthrs = sum2 * night_factor
                         nightcount += nighthrs
                         #print(nightcount)
+                    #print(totalhrs,wks_realhrs)
             if nightcount != control:
                 totalhrs = nightcount + counter
         if wks_totalhrs != control:
+            #print(totalhrs,wks_realhrs)
             totalhrs = totalhrs + wks_realhrs
-        print(totalhrs, uniqlst[a])
-        sem1_lst.append(totalhrs)
+        totalseconds = totalhrs.total_seconds()
+        daysconvert_f = int(totalseconds/86400)*24
+        hoursconver_f = (totalseconds%86400)/3600
+        totalhrs_asfloat = daysconvert_f + hoursconver_f
+        totalhrs_asfloat = round(totalhrs_asfloat,2)
+        print(totalhrs_asfloat, uniqlst[a])
+        sem1_lst.append(totalhrs_asfloat)
     return sem1_lst
 
 def process_sem2_data(dataframe, uniqlst):
@@ -294,8 +304,13 @@ def process_sem2_data(dataframe, uniqlst):
         if wks_totalhrs != control:
             #print(totalhrs, wks_realhrs)
             totalhrs = totalhrs + wks_realhrs
-        print(totalhrs, uniqlst[a])
-        sem2_lst.append(totalhrs)
+        totalseconds = totalhrs.total_seconds()
+        daysconvert_f = int(totalseconds/86400)*24
+        hoursconver_f = (totalseconds%86400)/3600
+        totalhrs_asfloat = daysconvert_f + hoursconver_f
+        totalhrs_asfloat = round(totalhrs_asfloat,2)
+        print(totalhrs_asfloat , uniqlst[a])
+        sem2_lst.append(totalhrs_asfloat)
     return sem2_lst
 
 def data_analysis(sem1_lst,uniqlst):
