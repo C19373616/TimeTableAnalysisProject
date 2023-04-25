@@ -2,7 +2,7 @@
 Project Name: Staff Scehduling
 Creator: Francis Santos
 Student Number: C19373616
-Version: TAPv2.1  
+Version: TAPv2.2  
 """
 
 """
@@ -127,6 +127,7 @@ def process_sem1_data(dataframe, uniqlst):
     for a in range(0, len(uniqlst)):
         night_time = pd.Timedelta(hours=18, minutes=0, seconds=0)
         night_factor = 0.25
+        unsched_hrs = pd.Timedelta(0)
         control = pd.Timedelta(0)
         counter = pd.Timedelta(0)
         counter1 = pd.Timedelta(0)
@@ -171,22 +172,33 @@ def process_sem1_data(dataframe, uniqlst):
                         wks_nightcount += wks_nighthrs
                     if wks_nightcount != control:
                         wks_totalhrs = wks_nightcount + wks_counter
-                    if nOf_teaching_wks != control:
+                    if nOf_teaching_wks != control and nOf_teaching_wks < 13:
                         #print(wks_counter1,"/13",nOf_teaching_wks)
                         wks_convrt_13 = wks_counter1 * (nOf_teaching_wks/13)
                         if wks_nightcount != control:
                             wks_convrt_13_night = wks_nighthrs * (nOf_teaching_wks/13)
                             wks_convrt_13 = wks_convrt_13 + wks_convrt_13_night
+                        """
+                        HERE!!
+                        if '00:00:00' in str(wks_start_time):
+                            print(dataframe["Staff Names"][i],unsched_hrs,"True")
+                            unsched_hrs += wks_convrt_13
+                        """
                         #print(wks_convrt_13,nOf_teaching_wks)
                         wks_realhrs += wks_convrt_13
+ 
                 else:
                     counter += pd.Timedelta(hours=dataframe["Duration"][i].hour,minutes=dataframe["Duration"][i].minute)
                     counter1 = pd.Timedelta(hours=dataframe["Duration"][i].hour,minutes=dataframe["Duration"][i].minute)
+                    nOf_teaching_wks = int(dataframe["Number Of Teaching Weeks"][i])
                     start_time = pd.Timestamp(dataframe["Scheduled Start Time"][i])
                     sched_start = pd.Timedelta(hours=start_time.hour, minutes=start_time.minute)
                     sched_end = counter1 + sched_start
                     totalhrs = counter
                     nighthrs = pd.Timedelta(0)
+                    if sched_start == pd.Timedelta(0) and nOf_teaching_wks >= 13:
+                        unsched_hrs += counter1
+                        #print(dataframe["Staff Names"][i],unsched_hrs,"True") 
                     if sched_end > night_time:
                         if sched_start >= night_time:
                             sum1 = sched_end - sched_start
@@ -208,7 +220,7 @@ def process_sem1_data(dataframe, uniqlst):
         hoursconver_f = (totalseconds%86400)/3600
         totalhrs_asfloat = daysconvert_f + hoursconver_f
         totalhrs_asfloat = round(totalhrs_asfloat,2)
-        print(totalhrs_asfloat, uniqlst[a])
+        #print(totalhrs_asfloat, uniqlst[a])
         sem1_lst.append(totalhrs_asfloat)
     return sem1_lst
 
@@ -309,11 +321,11 @@ def process_sem2_data(dataframe, uniqlst):
         hoursconver_f = (totalseconds%86400)/3600
         totalhrs_asfloat = daysconvert_f + hoursconver_f
         totalhrs_asfloat = round(totalhrs_asfloat,2)
-        print(totalhrs_asfloat , uniqlst[a])
+        #print(totalhrs_asfloat , uniqlst[a])
         sem2_lst.append(totalhrs_asfloat)
     return sem2_lst
 
-def data_analysis(sem1_lst,uniqlst):
+def data_analysis(sem1_lst,sem2_lst,uniqlst):
     usrinpt = input(r'Please enter file location of the contract hours file i.e., (C:\Users\JohnDoe\Data.xlsx): ')
     xl = pd.ExcelFile(usrinpt)
     read1 = pd.read_excel(xl, 'Lecturers',usecols="A,B,C", names=["Lecturers1","S1 Hours","S2 Hours"])
@@ -321,23 +333,53 @@ def data_analysis(sem1_lst,uniqlst):
     realtime_df = pd.DataFrame(sem1_lst,columns=["S1 Hours"])
     #use of strftime reference: https://www.programiz.com/python-programming/datetime/strftime
     #realtime_df.index += 1
-    realtime_df['S1 Hours'] = pd.to_datetime(realtime_df['S1 Hours'].dt.total_seconds(), unit='s').dt.strftime('%H:%M:%S')
+    #realtime_df['S1 Hours'] = pd.to_datetime(realtime_df['S1 Hours'].dt.total_seconds(), unit='s').dt.strftime('%H:%M:%S')
+    realtime_df['S2 Hours'] = sem2_lst
     realtime_df['Lecturers'] = uniqlst
-    realtime_df = realtime_df[['Lecturers','S1 Hours']]
+    realtime_df = realtime_df[['Lecturers','S1 Hours','S2 Hours']]
     realtime_df['Lecturers'] = realtime_df['Lecturers'].astype(str).replace(r"(  )",'',regex=True)
     contracth_df['Lecturers1'] = contracth_df['Lecturers1'].astype(str).replace(r"( )",'',regex=True)
-    staff_existing = []
-    lst = []
+    staffhrstotalhrsS1 = []
+    staffhrstotalhrsS2 = []
+    staffhrsS1_undr_over = []
+    staffhrsS2_undr_over = []
+    total_under_over = []
+    yearhrs = []
+    customer_outputRep = pd.DataFrame()
     print("\n")
-    conter = 0
     for i in range(0,len(contracth_df['Lecturers1'])):
         if contracth_df['Lecturers1'][i] in str(realtime_df['Lecturers']).lstrip():
-            conter += 1
             #print(contracth_df['Lecturers1'][i],contracth_df['S1 Hours'][i],realtime_df['S1 Hours'][i])
-            staff_existing.append(realtime_df['S1 Hours'][i])
+            indx = realtime_df.index[realtime_df['Lecturers'] == contracth_df['Lecturers1'][i]][0]
+            staffhrstotalhrsS1.append(realtime_df['S1 Hours'][indx])
+            staffhrstotalhrsS2.append(realtime_df['S2 Hours'][indx])
         else:
-            lst.append(contracth_df['Lecturers1'][i])
-    #print(lst)
+            staffhrstotalhrsS1.append(0)
+            staffhrstotalhrsS2.append(0)
+    for i in range(0,len(contracth_df['Lecturers1'])):
+        s1_chs_sub_ttlhrs = float(staffhrstotalhrsS1[i]) - float(contracth_df['S1 Hours'][i])
+        s2_chs_sub_ttlhrs = float(staffhrstotalhrsS2[i]) - float(contracth_df['S2 Hours'][i])
+        yeartotal = (float(staffhrstotalhrsS1[i])*13)+(float(staffhrstotalhrsS2[i])*13)
+        staffhrsS1_undr_over.append(s1_chs_sub_ttlhrs)
+        staffhrsS2_undr_over.append(s2_chs_sub_ttlhrs)
+        yearhrs.append(yeartotal)
+    for i in range(0,len(contracth_df['Lecturers1'])):
+        totalundrover = float(staffhrsS1_undr_over[i]) + float(staffhrsS2_undr_over[i])
+        
+        total_under_over.append(totalundrover)
+        
+    customer_outputRep['Lecturers'] = contracth_df['Lecturers1']
+    customer_outputRep['CHS1'] = contracth_df['S1 Hours']
+    customer_outputRep['S1 Total Hours'] = staffhrstotalhrsS1
+    customer_outputRep['S1 Over'] = staffhrsS1_undr_over
+    
+    customer_outputRep['CHS2'] = contracth_df['S2 Hours']
+    customer_outputRep['S2 Total Hours'] = staffhrstotalhrsS2
+    customer_outputRep['S2 Over'] = staffhrsS2_undr_over
+    customer_outputRep['Over Hrs'] = total_under_over
+    customer_outputRep['Year'] = yearhrs
+    customer_outputRepA = customer_outputRep[['Lecturers','CHS1','S1 Over','CHS2','S2 Over','Over Hrs','Year']]
+    print(customer_outputRepA )
     #print(realtime_df)
       
 
@@ -352,7 +394,7 @@ def main():
     else:
         print("Error occurred retrieving data application terminating")
         sys.exit()
-    data_analysis(sem1_lst,uniqlst)    
+    data_analysis(sem1_lst,sem2_lst,uniqlst)    
 if __name__== "__main__":
     main()
     
