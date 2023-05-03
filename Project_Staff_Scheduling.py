@@ -23,15 +23,20 @@ def set_configs():
     display to be shown when the program is executed, the max number of rows and columns are set
     as well as a print to explain what the program is.
     """
-    pd.set_option('display.max_rows', 1000)
-    pd.set_option('display.max_columns', 1000)
-    pd.set_option('max_colwidth', None)
-    pd.set_option('display.width', 1000)
-    print("!=================================================================================!")
-    print("Hello, this program is used to summarise the hours for TUDublin staff")
-    print("Please ensure that file is a .xlsx and include .xlsx in the full pathway")
-    print("Also ensure that the correct first and second pathway is used when using 'default'")
-    print("!=================================================================================!\n")
+    #limit display of data 
+    pd.set_option('display.max_rows', 500)
+    pd.set_option('display.max_columns', None)
+    pd.set_option('max_colwidth', 500)
+    pd.set_option('display.width', 500)
+    #display a guide for user to use
+    print("!===================================================================================!")
+    print("Hello, this program is used to summarise and analyse the lecturer hours in TUDublin.")
+    print("Two input files are needed here,the first one consists of the raw timetable data.")
+    print("The seond input file consists of the contracted hours a lecturer is set to work.")
+    print("The file pathway of these files can be entered in the .txt file or here.")
+    print("Please ensure that the file is a .xlsx and include .xlsx in the full pathway.")
+    print("Also ensure that the first and second file pathway is correct when using 'default'.")
+    print("!===================================================================================!\n")
 
 def file_setup(counter):
     """
@@ -46,16 +51,28 @@ def file_setup(counter):
     will be passed to the file_sort() function if this function detects that the path is incorrect the application
     will terminate.
     """
+    #loop infinitely until incorrect file is detected or correct file is detected
     while True:
         try:
+            #check which file the user is entering based on the parameter value passed in
             if counter == 0:
                 file_loc = input(r"Please enter pathway of First excel file here i.e., (C:\Users\JohnDoe\SyllabusPlusfile.xlsx) or type default if pathway has already been set for the syllabus plus output file:")
             if counter == 1:
                 file_loc = input(r"Please enter pathway of Second excel file here i.e., (C:\Users\JohnDoe\ContractHoursfile.xlsx) or type default if pathway has already been set for the lecturer contract hours file:")
             print('\n')
+            #open the text file that stores the file locations and read lines inside it
             xlfile = open("timetablelocation.txt","r")
             readfile = xlfile.readlines()
-            if "\\" in str(file_loc):
+            #if .txt file is empty user must can enter and save a file location path 
+            if len(readfile) <= 0:
+                store_def_loc = input("Would you like to make this the default file location? Yes or No? ")
+                if "yes" in store_def_loc.lower():
+                    save_loc = open("timetablelocation.txt","w")
+                    save_loc.write(file_loc)
+                    save_loc.close()
+                xlfile.close()
+            #user can add new file path if a file location is entered and .txt file is more than or equal 1
+            elif "\\" in str(file_loc) and len(readfile) >= 1 :
                     addpath = input("Would you like to save this file location?")
                     if 'yes' in addpath.lower():
                         save_loc = open("timetablelocation.txt","w")
@@ -63,15 +80,9 @@ def file_setup(counter):
                         file_loc = file_loc.rstrip()
                     else:
                         file_loc = file_loc.rstrip()
-            if len(readfile) <= 0:
-                store_def_loc = input("Would you like to make this the default file location? Yes or No ")
-                if "yes" in store_def_loc.lower():
-                    save_loc = open("timetablelocation.txt","w")
-                    save_loc.write(file_loc)
-                    save_loc.close()
-                xlfile.close()
-            elif "default" in file_loc.lower():
-                if len(readfile) > 1:
+            #check to see the file paths in .txt file and display, allow user to choose which file path they want
+            elif "default" in file_loc.lower() and len(readfile) >= 1:
+                if len(readfile) >= 1:
                     counter = 0
                     for i in readfile:
                         print(counter," - ",i)
@@ -87,18 +98,23 @@ def file_setup(counter):
                             print("Default file path location entered:",whichloc)
                     a = readfile[whichloc].rstrip()
                     file_loc = a
+            #check if there is one file path in the .txt if so make it default file path otherwise if 0 let user know and close file
             elif len(readfile) == 1 :
                     file_loc = readfile
             elif len(file_loc) == 0:
                 print("No default file location found or set")
             xlfile.close()
+            #check the file path is distinguished and valid, break infinite loop, else prompt that file is wrong and end program
             if len(file_loc) > 0:
+                print("File path accepted!")
                 break
             else:
                 print("Error occurred retrieving file path, application terminating!")
                 sys.exit()
+        #catch FileNotFoundErrors and prompt the user instead with a message
         except FileNotFoundError:
             print("Error! Incorrect pathway or pathway not found please try again")
+    #when loop is broken return file path back to main
     return file_loc
 
 def file_sort(file_loc):
@@ -116,6 +132,7 @@ def file_sort(file_loc):
     preparing it for staff total hours in the process_data() function. The unique list and ordered
     dataframe are sent back to main.
     """
+    #reads in excel file and places data in appropriate columns and formatted to more usable data
     try:
         read_data = pd.read_excel(file_loc,usecols="A,J,K,N,Q,U,V", names=["Module Name","Scheduled Start Time","Duration","Availability","Staff Names","Teaching Week Pattern","Number Of Teaching Weeks"])
     except FileNotFoundError:
@@ -128,16 +145,20 @@ def file_sort(file_loc):
     df['Duration'] = pd.to_datetime(df['Duration'], format='%H:%M')
     names = df["Staff Names"].str.split(',')
     lst = []
+    #loops through the split names in dataframe pairs names based on first and last name and added to list
     for i in range(0,len(names)):
         namepairs = list(zip(names[i][::2],names[i][1::2]))
         lst.append(namepairs)
+    #dataframe rearranged to accomodate for new name pairs, data is then unstacked and index is reset
     df["Staff Names"] = lst
     df = df.explode('Staff Names').reset_index(drop=True)
+    #characters are removed again and columns are reordered, duplicate value instances removed and made a new variable
     df["Staff Names"] = df["Staff Names"].astype(str).replace(r"(?<!\w)'|'(?!\w)|[()]",'',regex=True)
     df["Staff Names"] = df["Staff Names"].astype(str).replace(r'[""]','',regex=True)
     df.index += 1
     df_order = df[["Staff Names","Scheduled Start Time","Duration","Availability","Module Name","Teaching Week Pattern","Number Of Teaching Weeks"]]
     uniqlst = df["Staff Names"].unique()
+    #values in unique list are sorted alphabetically and returned to main along with ordered dataframe 
     uniqlst.sort()
     return df_order,uniqlst
 
@@ -153,6 +174,7 @@ def timedelta_to_float(totalseconds):
     lecturer has completed, this is then rounded to 2 decimal places at the end and passed back to the function
     that called this function.
     """
+    #created constant values and used to perform calculations on total seconds of passed in parameter
     day_ttl_seconds = 86400
     hours_ttl_seconds = 3600
     get_ttlseconds = totalseconds.total_seconds()
@@ -160,6 +182,7 @@ def timedelta_to_float(totalseconds):
     hrs_cnvrt_flt = (get_ttlseconds%day_ttl_seconds)/hours_ttl_seconds
     ttlhrs_asfloat = days_cnvrt_flt + hrs_cnvrt_flt
     ttlhrs_2deciml_p = round(ttlhrs_asfloat,2)
+    #calculated total hours as a float returned to function 
     return ttlhrs_2deciml_p
     
   
@@ -218,17 +241,18 @@ def process_sem1_data(dataframe, uniqlst):
         for i in range(1, len(dataframe["Staff Names"])):
             #\b is a word boundary which essentially allows only position between the boundary defined to be matched meaning if anything follows the number it is not matched.
             #reference: https://medium.com/factory-mind/regex-tutorial-a-simple-cheatsheet-by-examples-649dc1c3f285
-            #if statement finds semester, weeks and terms all related to semester 1
+            #if statement finds semester, weeks and terms all related to semester 1 using regex search
             if (uniqlst[a] in dataframe["Staff Names"][i] and
                     (("Semester 1" in str(dataframe["Availability"][i]) or "Term 1" in str(dataframe["Availability"][i]))
                      or (str(dataframe["Availability"][i]) == '0' and (re.search(r"\b([4-9]|1[0-6])\b", str(dataframe["Teaching Week Pattern"][i]))))
                      or (re.search(r"Weeks\s+([4-9]|1[0-6])\b", str(dataframe["Availability"][i])))
                      or (re.search(r"Week\s+([4-9]|1[0-6])\b", str(dataframe["Availability"][i]))))):
-                #section uses regex to find weeks from 4 - 9 and 10 - 16 
+                #condition statment uses regex to find weeks individual or grouped from range 4 - 16 by matching patterns in the data at index i
                 if ((re.search(r"Weeks\s+([4-9]|1[0-6])\b", str(dataframe["Availability"][i])))
                     or (str(dataframe["Availability"][i]) == '0' and (re.search(r"\b([4-9]|1[0-6])\b", str(dataframe["Teaching Week Pattern"][i]))))
                     or "Term 1" in str(dataframe["Availability"][i])
                      or (re.search(r"Week\s+([4-9]|1[0-6])\b", str(dataframe["Availability"][i])))):
+                    #variables initialised to hold relevant data concerning weeks
                     nOf_teaching_wks = int(dataframe["Number Of Teaching Weeks"][i])
                     wks_counter += pd.Timedelta(hours=dataframe["Duration"][i].hour,minutes=dataframe["Duration"][i].minute)
                     wks_counter1 = pd.Timedelta(hours=dataframe["Duration"][i].hour,minutes=dataframe["Duration"][i].minute)
@@ -238,6 +262,7 @@ def process_sem1_data(dataframe, uniqlst):
                     wks_totalhrs = wks_counter
                     wks_convrt_13 = pd.Timedelta(0)
                     wks_nighthrs = pd.Timedelta(0)
+                    #condition statements below check for specific characteristics and adds up hours together respectively
                     if '00:00:00' in str(wks_start_time) and nOf_teaching_wks >= 13:
                         wks_unsched_hrs += wks_counter1
                     if wks_sched_end <= night_time and '00:00:00' not in str(wks_start_time) and nOf_teaching_wks >= 13:
@@ -257,13 +282,12 @@ def process_sem1_data(dataframe, uniqlst):
                             if '00:00:00' not in str(wks_start_time) and nOf_teaching_wks >= 13:
                                 wks_s1night += wks_sum2
                         wks_nightcount += wks_nighthrs
+                    #condition statements below calculate the total and individual hours for specific factors and adds values up respectively
                     if wks_nightcount != control:
                         wks_totalhrs = wks_nightcount + wks_counter
                     if wks_calc_s1day != control and nOf_teaching_wks >= 13 and '00:00:00' not in str(wks_start_time):
                         wks_s1day += wks_calc_s1day
-                        #wks_s1night += wks_calc_s1night
                     if nOf_teaching_wks != control and nOf_teaching_wks < 13:
-                        #print(wks_counter1,"/13",nOf_teaching_wks)
                         wks_convrt_13 = wks_counter1 * (nOf_teaching_wks/13)
                         wks_s1day_cvrt = wks_calc_s1day * (nOf_teaching_wks/13)
                         wks_convrt_calc_s1night = wks_calc_s1night * (nOf_teaching_wks/13) 
@@ -272,16 +296,16 @@ def process_sem1_data(dataframe, uniqlst):
                         if wks_nightcount != control:
                             wks_convrt_13_night = wks_nighthrs * (nOf_teaching_wks/13)
                             wks_convrt_13 = wks_convrt_13 + wks_convrt_13_night
-                        #print(wks_convrt_13,nOf_teaching_wks)
                         wks_realhrs += wks_convrt_13
                         if '00:00:00' in str(wks_start_time):
                             wks_unsched_hrs += wks_convrt_13
                         if wks_sched_end <= night_time and '00:00:00' not in str(wks_start_time):
                             wks_s1day += wks_convrt_13
                         if (wks_sched_end > night_time and '00:00:00' not in str(wks_start_time) and wks_convrt_calc_s1night != control):
-                            #print("(@@)",wks_convrt_calc_s1night,nOf_teaching_wks)
                             wks_s1night += wks_convrt_calc_s1night
+                #else condition catches remaining data that does not pass condition statement
                 else:
+                    #process below follows the same calculation as above condition statement but has less parameters to consider
                     counter += pd.Timedelta(hours=dataframe["Duration"][i].hour,minutes=dataframe["Duration"][i].minute)
                     counter1 = pd.Timedelta(hours=dataframe["Duration"][i].hour,minutes=dataframe["Duration"][i].minute)
                     nOf_teaching_wks = int(dataframe["Number Of Teaching Weeks"][i])
@@ -293,7 +317,6 @@ def process_sem1_data(dataframe, uniqlst):
                     if '00:00:00' in str(start_time) and nOf_teaching_wks >= 13:
                         unsched_hrs += counter1
                     if sched_end <= night_time and '00:00:00' not in str(start_time) and nOf_teaching_wks >= 13:
-                        #print(counter1)
                         s1_day += counter1 
                     if sched_end > night_time:
                         if sched_start >= night_time:
@@ -310,17 +333,16 @@ def process_sem1_data(dataframe, uniqlst):
                         nightcount += nighthrs
             if nightcount != control:
                 totalhrs = nightcount + counter
+        #final checks are completed to add week equivalent total hours and total hours
         if wks_totalhrs != control:
-            #print(totalhrs,wks_realhrs,uniqlst[a])
             totalhrs = totalhrs + wks_realhrs
-          
         if wks_s1night  != control:
             s1_night = s1_night + wks_s1night
         if wks_s1day != pd.Timedelta(0) or calc_s1day != pd.Timedelta(0):
             s1_day = s1_day + wks_s1day + calc_s1day 
         if wks_unsched_hrs != pd.Timedelta(0):
             unsched_hrs = unsched_hrs + wks_unsched_hrs
-        #print(uniqlst[a],s1_night)
+        #values converted to float added to list and returned back to main
         s1day_ttlhrs_2dp = timedelta_to_float(s1_day)
         s1night_ttlhrs_2dp = timedelta_to_float(s1_night)
         unschd_ttlhrs_2dp = timedelta_to_float(unsched_hrs)
@@ -388,7 +410,7 @@ def process_sem2_data(dataframe, uniqlst):
         for i in range(1, len(dataframe["Staff Names"])):
             #\b is a word boundary which essentially allows only position between the boundary defined to be matched meaning if anything follows the number it is not matched.
             #reference: https://medium.com/factory-mind/regex-tutorial-a-simple-cheatsheet-by-examples-649dc1c3f285
-            #if statement finds semester, weeks and terms all related to semester 1
+            #if statement finds semester, weeks and terms all related to semester 2 using regex search
             if (uniqlst[a] in dataframe["Staff Names"][i] and
                     (("Semester 2" in str(dataframe["Availability"][i]) or "Term 2" in str(dataframe["Availability"][i]))
                      or "Semester 1&2" in str(dataframe["Availability"][i]).lstrip()
@@ -397,12 +419,13 @@ def process_sem2_data(dataframe, uniqlst):
                      or (re.search(r"(1[8-9]|2[0-9]|3[0-9]4[0-5])", str(dataframe["Availability"][i])))
                      or (re.search(r"Weeks\s+(1[8-9]|2[0-9]|3[0-9]|4[0-5])\b", str(dataframe["Availability"][i])))
                      or (re.search(r"Week\s+(1[8-9]|2[0-9]|3[0-9]|4[0-5])\b", str(dataframe["Availability"][i]))))):
-                #section uses regex to find weeks from 18 - 19, 22 - 29 and 30 - 39
+                #section uses regex to find weeks individual or grouped from range 18 - 45 by matching patterns in the data at index i
                 if ((re.search(r"Weeks\s+(1[8-9]|2[0-9]|3[0-9]|4[0-5])\b", str(dataframe["Availability"][i])))
                     or (str(dataframe["Availability"][i]) == '0' and (re.search(r"(1[8-9]|2[0-9]|3[0-9]|4[0-5])", str(dataframe["Teaching Week Pattern"][i]))))
                     or "Term 2" in str(dataframe["Availability"][i])
                      or "Term 3" in str(dataframe["Availability"][i])
                      or (re.search(r"Week\s+(1[8-9]|2[0-9]|3[0-9]|4[0-5])\b", str(dataframe["Availability"][i])))):
+                    #variables initialised to hold relevant data concerning weeks
                     nOf_teaching_wks = int(dataframe["Number Of Teaching Weeks"][i])
                     wks_counter += pd.Timedelta(hours=dataframe["Duration"][i].hour,minutes=dataframe["Duration"][i].minute)
                     wks_counter1 = pd.Timedelta(hours=dataframe["Duration"][i].hour,minutes=dataframe["Duration"][i].minute)
@@ -412,6 +435,7 @@ def process_sem2_data(dataframe, uniqlst):
                     wks_totalhrs = wks_counter
                     wks_convrt_13 = pd.Timedelta(0)
                     wks_nighthrs = pd.Timedelta(0)
+                    #condition statements below check for specific characteristics and adds up hours together respectively
                     if '00:00:00' in str(wks_start_time) and nOf_teaching_wks >= 13:
                         wks_unsched_hrs += wks_counter1
                     if wks_sched_end <= night_time and '00:00:00' not in str(wks_start_time) and nOf_teaching_wks >= 13:
@@ -431,6 +455,7 @@ def process_sem2_data(dataframe, uniqlst):
                             if '00:00:00' not in str(wks_start_time) and nOf_teaching_wks >= 13:
                                 wks_s2night += wks_sum2
                         wks_nightcount += wks_nighthrs
+                    #condition statements below calculate the total and individual hours for specific factors and adds values up respectively
                     if wks_nightcount != control:
                         wks_totalhrs = wks_nightcount + wks_counter
                     if wks_calc_s2day != pd.Timedelta(0) and nOf_teaching_wks >= 13 and '00:00:00' not in str(wks_start_time):
@@ -439,24 +464,22 @@ def process_sem2_data(dataframe, uniqlst):
                         wks_convrt_13 = wks_counter1 * (nOf_teaching_wks/13)
                         wks_s2day_cvrt = wks_calc_s2day * (nOf_teaching_wks/13)
                         wks_convrt_calc_s2night = wks_calc_s2night * (nOf_teaching_wks/13)
-                        #print(wks_counter1,"/13")
                         if wks_s2day != control:
                             wks_s2day += wks_s2day_cvrt
                         if wks_nightcount != control:
                             wks_convrt_13_night = wks_nighthrs * (nOf_teaching_wks/13)
-                            #print("night count",wks_convrt_13_night)
                             wks_convrt_13 = wks_convrt_13 + wks_convrt_13_night
-                        #print(wks_convrt_13,nOf_teaching_wks)
                         wks_realhrs += wks_convrt_13
                         if '00:00:00' in str(wks_start_time):
                             wks_unsched_hrs += wks_convrt_13
                         if wks_sched_end <= night_time and '00:00:00' not in str(wks_start_time):
-                            #print("(@@)",wks_convrt_13,nOf_teaching_wks)
                             wks_s2day += wks_convrt_13
                         if (wks_sched_end > night_time and '00:00:00' not in str(wks_start_time) and wks_convrt_calc_s2night != control):
-                            #print("(@@)",wks_convrt_calc_s1night,nOf_teaching_wks)
                             wks_s2night += wks_convrt_calc_s2night
+                            
+                #else condition catches remaining data that does not pass condition statement
                 else:
+                    #process below follows the same calculation as above condition statement but has less parameters to consider
                     counter += pd.Timedelta(hours=dataframe["Duration"][i].hour,minutes=dataframe["Duration"][i].minute)
                     counter1 = pd.Timedelta(hours=dataframe["Duration"][i].hour,minutes=dataframe["Duration"][i].minute)
                     start_time = pd.Timestamp(dataframe["Scheduled Start Time"][i])
@@ -468,13 +491,11 @@ def process_sem2_data(dataframe, uniqlst):
                     if '00:00:00' in str(start_time) and nOf_teaching_wks >= 13:
                         unsched_hrs += counter1
                     if sched_end <= night_time and '00:00:00' not in str(start_time) and nOf_teaching_wks >= 13:
-                        #print(counter1)
                         s2_day += counter1 
                     if sched_end > night_time:
                         if sched_start >= night_time:
                             sum1 = sched_end - sched_start
                             nighthrs = sum1 * night_factor
-                            #print(nighthrs,uniqlst[a])
                             if '00:00:00' not in str(start_time):
                                 s2_night += sum1 
                         elif sched_start < night_time:
@@ -484,11 +505,10 @@ def process_sem2_data(dataframe, uniqlst):
                             if '00:00:00' not in str(start_time):
                                 s2_night += sum2
                         nightcount += nighthrs
-                        #print(nightcount)
             if nightcount != control:
                 totalhrs = nightcount + counter
+        #final checks are completed to add week equivalent total hours and total hours
         if wks_totalhrs != control:
-            #print(totalhrs, wks_realhrs)
             totalhrs = totalhrs + wks_realhrs
         if wks_s2night != control:
             s2_night = s2_night + wks_s2night
@@ -496,7 +516,7 @@ def process_sem2_data(dataframe, uniqlst):
             s2_day = s2_day + wks_s2day + calc_s2day 
         if wks_unsched_hrs != pd.Timedelta(0):
             unsched_hrs = unsched_hrs + wks_unsched_hrs
-        #print(uniqlst[a],s2_night)
+        #values converted to float added to list and returned back to main
         s2day_ttlhrs_2dp = timedelta_to_float(s2_day)
         s2night_ttlhrs_2dp = timedelta_to_float(s2_night)
         unschd_ttlhrs_2dp = timedelta_to_float(unsched_hrs)
@@ -523,7 +543,7 @@ def data_analysis(file_location,sem1_lst,sem2_lst,sem1_unschd_lst,sem2_unschd_ls
     then two different variants are created of this final dataframe one includes the total hours and the other does not. The two variants
     are then passed back to the main function.
     """
-    #usrinpt = input(r'Please enter file location of the contract hours file i.e., (C:\Users\JohnDoe\Data.xlsx): ')
+    #two dataframes created from the second input file and the processed data of semester 1 and 2
     xl = pd.ExcelFile(file_location)
     read1 = pd.read_excel(xl, 'Lecturers',usecols="A,B,C", names=["Lecturers1","S1 Hours","S2 Hours"])
     contracth_df = pd.DataFrame(read1)
@@ -539,6 +559,7 @@ def data_analysis(file_location,sem1_lst,sem2_lst,sem1_unschd_lst,sem2_unschd_ls
     realtime_df = realtime_df[['Lecturers','S1 Hours','S2 Hours','S1 Unsch','S1 Day','S1 Night','S2 Unsch','S2 Day','S2 Night']]
     realtime_df['Lecturers'] = realtime_df['Lecturers'].astype(str).replace(r"(  )",'',regex=True)
     contracth_df['Lecturers1'] = contracth_df['Lecturers1'].astype(str).replace(r"( )",'',regex=True)
+    #lists created are used to hold data that will be used to create the final dataframe
     staff_hrstotalhrsS1 = []
     staff_hrstotalhrsS2 = []
     staff_unschdhrsS1 = []
@@ -551,9 +572,11 @@ def data_analysis(file_location,sem1_lst,sem2_lst,sem1_unschd_lst,sem2_unschd_ls
     staff_hrsS2_undr_over = []
     total_under_over = []
     yearhrs = []
-    customer_outputRep = pd.DataFrame()
+    
     print("\n")
+    #loops through and compares names in unique set and second input file names
     for i in range(0,len(contracth_df['Lecturers1'])):
+        #if names match extract the associated processed data and add to list appropriate
         if contracth_df['Lecturers1'][i] in str(realtime_df['Lecturers']).lstrip():
             indx = realtime_df.index[realtime_df['Lecturers'] == contracth_df['Lecturers1'][i]][0]
             staff_hrstotalhrsS1.append(realtime_df['S1 Hours'][indx])
@@ -564,6 +587,7 @@ def data_analysis(file_location,sem1_lst,sem2_lst,sem1_unschd_lst,sem2_unschd_ls
             staff_S2Day.append(realtime_df['S2 Day'][indx])
             staff_S1Night.append(realtime_df['S1 Night'][indx])
             staff_S2Night.append(realtime_df['S2 Night'][indx])
+        #if names dont match add a 0 to that index of list appropriate
         else:
             staff_hrstotalhrsS1.append(0)
             staff_hrstotalhrsS2.append(0)
@@ -573,7 +597,7 @@ def data_analysis(file_location,sem1_lst,sem2_lst,sem1_unschd_lst,sem2_unschd_ls
             staff_S2Day.append(0)
             staff_S1Night.append(0)
             staff_S2Night.append(0)
-            
+    #loops through names in dataframe and performs calculations to get wanted value and add to list appropriate  
     for i in range(0,len(contracth_df['Lecturers1'])):
         s1_chs_sub_ttlhrs = float(staff_hrstotalhrsS1[i]) - float(contracth_df['S1 Hours'][i])
         s2_chs_sub_ttlhrs = float(staff_hrstotalhrsS2[i]) - float(contracth_df['S2 Hours'][i])
@@ -581,11 +605,13 @@ def data_analysis(file_location,sem1_lst,sem2_lst,sem1_unschd_lst,sem2_unschd_ls
         staff_hrsS1_undr_over.append(s1_chs_sub_ttlhrs)
         staff_hrsS2_undr_over.append(s2_chs_sub_ttlhrs)
         yearhrs.append(yeartotal)
-        
+    #loop through names in dataframe and perform calculation to get wanted sum value and add to list appropriate
     for i in range(0,len(contracth_df['Lecturers1'])):
         totalundrover = float(staff_hrsS1_undr_over[i]) + float(staff_hrsS2_undr_over[i])
         total_under_over.append(totalundrover)
-        
+
+    #create final dataframe and append correct lists to named columns
+    customer_outputRep = pd.DataFrame()
     customer_outputRep['Lecturers'] = contracth_df['Lecturers1']
     customer_outputRep['CHS1'] = contracth_df['S1 Hours']
     customer_outputRep['S1 Total Hours'] = staff_hrstotalhrsS1
@@ -601,6 +627,7 @@ def data_analysis(file_location,sem1_lst,sem2_lst,sem1_unschd_lst,sem2_unschd_ls
     customer_outputRep['S2 Day'] = staff_S2Day
     customer_outputRep['S1 Night'] = staff_S1Night
     customer_outputRep['S2 Night'] = staff_S2Night
+    #two versions of dataframe created one holds additional columns and other does not which are both returned to main
     customer_outputRepA = customer_outputRep[['Lecturers','CHS1','S1 Over','CHS2','S2 Over','Over Hrs','Year','S1 Unsch','S1 Day','S1 Night','S2 Unsch','S2 Day','S2 Night']]
     customer_outputRepB = customer_outputRep[['Lecturers','CHS1','S1 Total Hours','S1 Over','CHS2','S2 Total Hours','S2 Over','Over Hrs','Year','S1 Unsch','S1 Day','S1 Night','S2 Unsch','S2 Day','S2 Night']]
     print(customer_outputRepA)
@@ -612,7 +639,7 @@ def exportToExcel(customer_outputRepA,customer_outputRepB):
     In this function the two dataframes that are passed to it are wrote to a new excel file, two new datasheets are created
     one for each of the dataframe that is wrote to it. 
     """
-    #xlfile = open("timetablelocation.txt","r")
+    #using pandas module ExcelWriter() write to new excel file and add two dataframes on seperate datasheets
     with pd.ExcelWriter('Timetable_Analysis_Report.xlsx') as writer:
         customer_outputRepA.to_excel(writer, sheet_name='Summary')
         customer_outputRepB.to_excel(writer, sheet_name='Summary Total Hours Included')
@@ -648,27 +675,3 @@ def main():
 if __name__== "__main__":
     main()
     
-"""
-Test Code:
-#df[['Last Name','First Name']] = df["Staff Names"].str.split(',',n=1,expand=True)   #n param stands for the number of splits done
-#df["Staff Names"] = df["Staff Names"].str.split(',').str[:2].str.join(',')
-#print(df['Staff Names'].head(600))
-
-for i in range(1,len(dataframe["Duration"])):
-#if "Angela" in dataframe["First Name"][i] and "Adams" in dataframe["Last Name"][i] and "Semester 2"  in dataframe["Availability"][i]:
-if "Angela" in dataframe["Staff Names"][i] and "Adams" in dataframe["Staff Names"][i] and "Semester 1"  in dataframe["Availability"][i] :
-print(i,dataframe["Duration"][i])
-#print(len(unqlst))
-       
-#a = df1.sort_values("Lecturers1")
-#print(a)
-#print(df.head(600))
-
-            if len(dataframe) > 0 and len(uniqlst) > 0:
-                #print(len(file_loc))
-                break
-            else:
-                print("Error occurred retrieving data application terminating")
-                sys.exit()
-
-"""
