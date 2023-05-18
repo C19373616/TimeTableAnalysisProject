@@ -2,7 +2,7 @@
 Project Name: Staff Scehduling
 Creator: Francis Santos
 Student Number: C19373616
-Version: TAPv3.0  
+Version: TAPv3.1  
 """
 
 """
@@ -13,12 +13,11 @@ correct parameters are set relating to appropriate data display
 import pandas as pd
 import re
 import sys
-import numpy as np
 import openpyxl
 
 def set_configs():
     """
-    file_setup():
+    set_configs():
     This function is used to set the configurations for pandas dataframe to allow for the correct
     display to be shown when the program is executed, the max number of rows and columns are set
     as well as a print to explain what the program is.
@@ -70,7 +69,9 @@ def file_setup(counter):
                     save_loc = open("timetablelocation.txt","w")
                     save_loc.write(file_loc)
                     save_loc.close()
-                xlfile.close()
+                else:
+                    file_loc = file_loc.rstrip()
+                    xlfile.close()
             #user can add new file path if a file location is entered and .txt file is more than or equal 1
             elif "\\" in str(file_loc) and len(readfile) >= 1 :
                     addpath = input("Would you like to save this file location?")
@@ -100,7 +101,7 @@ def file_setup(counter):
                     file_loc = a
             #check if there is one file path in the .txt if so make it default file path otherwise if 0 let user know and close file
             elif len(readfile) == 1 :
-                    file_loc = readfile
+                    file_loc = readfile[0].rstrip()
             elif len(file_loc) == 0:
                 print("No default file location found or set")
             xlfile.close()
@@ -239,7 +240,6 @@ def process_sem1_data(dataframe, uniqlst):
         wks_totalhrs = pd.Timedelta(0)
         wks_realhrs = pd.Timedelta(0)
         for i in range(1, len(dataframe["Staff Names"])):
-            #\b is a word boundary which essentially allows only position between the boundary defined to be matched meaning if anything follows the number it is not matched.
             #reference: https://medium.com/factory-mind/regex-tutorial-a-simple-cheatsheet-by-examples-649dc1c3f285
             #if statement finds semester, weeks and terms all related to semester 1 using regex search
             if (uniqlst[a] in dataframe["Staff Names"][i] and
@@ -643,6 +643,7 @@ def exportToExcel(customer_outputRepA,customer_outputRepB):
     with pd.ExcelWriter('Timetable_Analysis_Report.xlsx') as writer:
         customer_outputRepA.to_excel(writer, sheet_name='Summary')
         customer_outputRepB.to_excel(writer, sheet_name='Summary Total Hours Included')
+    
 
 def main():
     """
@@ -671,7 +672,7 @@ def main():
     counter = 1
     file_path2 = file_setup(counter)
     customer_outputRepA,customer_outputRepB = data_analysis(file_path2,sem1_lst,sem2_lst,sem1_unschd_lst,sem2_unschd_lst,sem1_s1day_lst,sem2_s2day_lst,sem1_s1night_lst,sem2_s2night_lst,uniqlst)
-    exportToExcel(customer_outputRepA,customer_outputRepB) 
+    exportToExcel(customer_outputRepA,customer_outputRepB)
 if __name__== "__main__":
     main()
     
