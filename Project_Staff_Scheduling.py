@@ -1,5 +1,5 @@
 """
-Project Name: Staff Scehduling
+Project Name: Staff Scheduling
 Creator: Francis Santos
 Student Number: C19373616
 Version: TAPv3.1  
@@ -572,7 +572,6 @@ def data_analysis(file_location,sem1_lst,sem2_lst,sem1_unschd_lst,sem2_unschd_ls
     staff_hrsS2_undr_over = []
     total_under_over = []
     yearhrs = []
-    
     print("\n")
     #loops through and compares names in unique set and second input file names
     for i in range(0,len(contracth_df['Lecturers1'])):
