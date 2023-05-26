@@ -2,18 +2,16 @@
 Project Name: Staff Scheduling
 Creator: Francis Santos
 Student Number: C19373616
-Version: TAPv3.1  
+Version: TAPv3.2  
 """
 
 """
 - The section below imports necessary necessary libraries and
 correct parameters are set relating to appropriate data display
-- Openpyxl is a library used to read or write microsoft excel files 
 """
 import pandas as pd
 import re
 import sys
-import openpyxl
 
 def set_configs():
     """
@@ -63,21 +61,21 @@ def file_setup(counter):
             xlfile = open("timetablelocation.txt","r")
             readfile = xlfile.readlines()
             #if .txt file is empty user must can enter and save a file location path 
-            if len(readfile) <= 0:
-                store_def_loc = input("Would you like to make this the default file location? Yes or No? ")
+            if len(readfile) <= 0 and "\\" in str(file_loc):
+                store_def_loc = input("Would you like to make this the default file location? Yes or No?")
                 if "yes" in store_def_loc.lower():
+                    xlfile.close()
                     save_loc = open("timetablelocation.txt","w")
                     save_loc.write(file_loc)
                     save_loc.close()
                 else:
                     file_loc = file_loc.rstrip()
-                    xlfile.close()
             #user can add new file path if a file location is entered and .txt file is more than or equal 1
             elif "\\" in str(file_loc) and len(readfile) >= 1 :
                     addpath = input("Would you like to save this file location?")
                     if 'yes' in addpath.lower():
-                        save_loc = open("timetablelocation.txt","w")
-                        save_loc.write(file_loc)
+                        save_loc = open("timetablelocation.txt","a")
+                        save_loc.write("\n"+file_loc)
                         file_loc = file_loc.rstrip()
                     else:
                         file_loc = file_loc.rstrip()
@@ -608,7 +606,6 @@ def data_analysis(file_location,sem1_lst,sem2_lst,sem1_unschd_lst,sem2_unschd_ls
     for i in range(0,len(contracth_df['Lecturers1'])):
         totalundrover = float(staff_hrsS1_undr_over[i]) + float(staff_hrsS2_undr_over[i])
         total_under_over.append(totalundrover)
-
     #create final dataframe and append correct lists to named columns
     customer_outputRep = pd.DataFrame()
     customer_outputRep['Lecturers'] = contracth_df['Lecturers1']
